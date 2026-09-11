@@ -1,107 +1,92 @@
-import logging
+import telebot
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.constants import ParseMode
-from telegram.ext import (
-    Application,
-    CommandHandler,
-    ContextTypes,
-    ConversationHandler,
-    MessageHandler,
-    CallbackQueryHandler,
-    filters,
-)
+TOKEN ="8730995107:AAH1RJmIUEVwKDoaaIKl_o5x3m7j4dg1kU8"
+ADMIN_ID = 218104646
 
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO,
-)
-logger = logging.getLogger(__name__)
+ABOUT_BOT_TEXT = """سلام هم‌استانی عزیز 👋
 
-# ============================ تنظیمات (اینجا را پر کنید) ============================
-# توکنی که از @BotFather گرفته‌اید، دقیقاً همینجا جایگزین کنید:
-BOT_TOKEN ="8730995107:AAFB_JZioOcagqhdh3yL7gDwZEqt8JKKGqI"
+توی این بات تلگرام قسمتی رو گذاشتیم برای پیام‌های شما درباره مشکلات و مسائل روز استان خوزستان؛ که هر چی می‌خواستید به ما منتقل کنید رو از طریق این قسمت، بدون درج اسم و آیدی شما و به‌صورت کاملاً مخفیانه، به دست تیم پایگاه خبری به وقت اهواز می‌رسونه و ما پیگیر مشکلات شما خواهیم بود.
 
-# آیدی عددی چتی که پیام‌های ناشناس باید به آن فوروارد شود (آیدی خودتان یا یک گروه خصوصی)
-# برای گرفتن آیدی عددی خودتان می‌توانید به بات @userinfobot در تلگرام پیام بدهید.
-ADMIN_CHAT_ID = 218104646
+ممنون از انتخاب ما به‌عنوان یک پل برای بیان مشکلاتتون 🙏"""
 
-# لینک و نام کانال خبری شما
-CHANNEL_LINK = "https://t.me/your_channel"
-CHANNEL_NAME = "به وقت اهواز"
-# =====================================================================================
+waiting_users = {}
+question_map = {}  # کد سوال -> آیدی عددی کاربر
+next_question_id = 1
+bot = telebot.TeleBot(TOKEN)
 
-WAITING_FOR_MESSAGE = 1
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    markup = InlineKeyboardMarkup()
 
+    btn_about = InlineKeyboardButton("🤖 معرفی بات", callback_data="about_bot")
+    btn_question = InlineKeyboardButton("✉️ پیام شخصی پنهانی", callback_data="ask_question")
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    intro_text = (
-        f"سلام 👋\n\n"
-        f"به بات *{CHANNEL_NAME}* خوش آمدید.\n\n"
-        f"📰 برای دنبال کردن آخرین اخبار به کانال ما بپیوندید:\n"
-        f"{CHANNEL_LINK}\n\n"
-        f"همچنین می‌توانید پیام یا خبر خود را به‌صورت *کاملاً ناشناس* برای ما ارسال کنید."
-    )
-    keyboard = [
-        [InlineKeyboardButton("📢 عضویت در کانال", url=CHANNEL_LINK)],
-        [InlineKeyboardButton("✉️ ارسال پیام ناشناس", callback_data="anon_msg")],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(
-        intro_text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup
-    )
+    # ترتیب ردیف‌ها دقیقاً همین‌طور که چیده شده رندر می‌شود
+    markup.row(btn_about)
+    markup.row(btn_question)
 
+    bot.send_message(message.chat.id, "یکی از گزینه‌های زیر را انتخاب کنید:", reply_markup=markup)
 
-async def ask_for_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    query = update.callback_query
-    await query.answer()
-    await query.message.reply_text(
-        "پیام خود را بنویسید و ارسال کنید.\n"
-        "این پیام بدون نام یا شناسه شما برای ادمین فرستاده می‌شود.\n"
-        "برای انصراف /cancel را بزنید."
-    )
-    return WAITING_FOR_MESSAGE
+@bot.callback_query_handler(func=lambda call: call.data == "about_bot")
+def about_bot(call):
+    bot.answer_callback_query(call.id)
+    bot.send_message(call.message.chat.id, ABOUT_BOT_TEXT)
 
+@bot.callback_query_handler(func=lambda call: call.data == "ask_question")
+def ask_question(call):
+    bot.answer_callback_query(call.id)
+    user_id = call.from_user.id
+    waiting_users[user_id] = True
+    bot.send_message(user_id, "سوال خود را بنویس و ارسال کن:")
 
-async def forward_anonymous(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    if ADMIN_CHAT_ID:
-        await context.bot.send_message(
-            chat_id=ADMIN_CHAT_ID,
-            text=f"📩 پیام ناشناس جدید:\n\n{update.message.text}",
-        )
-    await update.message.reply_text("✅ پیام شما با موفقیت و به‌صورت ناشناس ارسال شد. ممنون!")
-    return ConversationHandler.END
+@bot.message_handler(func=lambda message: message.from_user.id in waiting_users)
+def receive_question(message):
+    global next_question_id
+    user = message.from_user
 
+    qid = next_question_id
+    next_question_id += 1
+    question_map[qid] = user.id
 
-async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await update.message.reply_text("ارسال پیام لغو شد.")
-    return ConversationHandler.END
+    text = f"""
+📩 سوال جدید دریافت شد (ناشناس)
+🔑 کد سوال: {qid}
+💬 متن سوال:
+{message.text}
 
+↩️ برای پاسخ، این دستور را بفرست:
+/reply {qid} متن پاسخ شما
+"""
+    bot.send_message(ADMIN_ID, text)
+    bot.send_message(message.chat.id, "✅ سوال شما با موفقیت ارسال شد.")
+    del waiting_users[user.id]
 
-def main() -> None:
-    if "ExampleTokenReplaceThisWithYourOwn" in BOT_TOKEN:
-        raise RuntimeError(
-            "لطفاً مقدار BOT_TOKEN را در بخش تنظیمات بالای فایل با توکن واقعی خودتان جایگزین کنید."
-        )
+@bot.message_handler(commands=['reply'])
+def reply_to_user(message):
+    if message.from_user.id != ADMIN_ID:
+        return  # فقط ادمین اجازه پاسخ دادن دارد
 
-    application = Application.builder().token(BOT_TOKEN).build()
+    try:
+        parts = message.text.split(maxsplit=2)
+        qid = int(parts[1])
+        answer_text = parts[2]
+    except (IndexError, ValueError):
+        bot.send_message(ADMIN_ID, "❌ فرمت درست: /reply کد متن‌پاسخ")
+        return
 
-    conv_handler = ConversationHandler(
-        entry_points=[CallbackQueryHandler(ask_for_message, pattern="^anon_msg$")],
-        states={
-            WAITING_FOR_MESSAGE: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, forward_anonymous)
-            ],
-        },
-        fallbacks=[CommandHandler("cancel", cancel)],
-    )
+    target_user_id = question_map.get(qid)
+    if not target_user_id:
+        bot.send_message(ADMIN_ID, "❌ کد سوال معتبر نیست یا قبلاً پاسخ داده شده.")
+        return
 
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(conv_handler)
+    try:
+        bot.send_message(target_user_id, f"📬 پاسخ به سوال شما:\n\n{answer_text}")
+        bot.send_message(ADMIN_ID, "✅ پاسخ ارسال شد.")
+        del question_map[qid]
+    except Exception as e:
+        bot.send_message(ADMIN_ID, f"❌ ارسال پاسخ ناموفق بود: {e}")
 
-    logger.info("Bot is starting (polling mode)...")
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
-
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    print("Bot is running...")
+    bot.infinity_polling()
