@@ -24,7 +24,7 @@ BOT_TOKEN ="8730995107:AAFB_JZioOcagqhdh3yL7gDwZEqt8JKKGqI"
 
 # آیدی عددی چتی که پیام‌های ناشناس باید به آن فوروارد شود (آیدی خودتان یا یک گروه خصوصی)
 # برای گرفتن آیدی عددی خودتان می‌توانید به بات @userinfobot در تلگرام پیام بدهید.
-ADMIN_CHAT_ID = 123456789
+ADMIN_CHAT_ID = 218104646
 
 # لینک و نام کانال خبری شما
 CHANNEL_LINK = "https://t.me/your_channel"
