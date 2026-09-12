@@ -1,8 +1,8 @@
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-TOKEN ="8730995107:AAH1RJmIUEVwKDoaaIKl_o5x3m7j4dg1kU8"
-ADMIN_ID = 218104646
+TOKEN ="your bot father token"
+ADMIN_ID = your ID
 
 ABOUT_BOT_TEXT = """سلام هم‌استانی عزیز 👋
 
