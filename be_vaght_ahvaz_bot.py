@@ -1,8 +1,8 @@
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-TOKEN ="your botfather token"
-ADMIN_ID = your ID
+TOKEN ="8730995107:AAH1RJmIUEVwKDoaaIKl_o5x3m7j4dg1kU8"
+ADMIN_ID = 218104646
 
 ABOUT_BOT_TEXT = """سلام هم‌استانی عزیز 👋
 
@@ -38,7 +38,7 @@ def ask_question(call):
     bot.answer_callback_query(call.id)
     user_id = call.from_user.id
     waiting_users[user_id] = True
-    bot.send_message(user_id, "سوال خود را بنویس و ارسال کن:")
+    bot.send_message(user_id, "مشکل یا مسئله منطقه سکونت خود را بیان کنید :")
 
 @bot.message_handler(func=lambda message: message.from_user.id in waiting_users)
 def receive_question(message):
@@ -50,7 +50,7 @@ def receive_question(message):
     question_map[qid] = user.id
 
     text = f"""
-📩 سوال جدید دریافت شد (ناشناس)
+📩 صحبت جدید دریافت شد (ناشناس)
 🔑 کد سوال: {qid}
 💬 متن سوال:
 {message.text}
@@ -59,7 +59,7 @@ def receive_question(message):
 /reply {qid} متن پاسخ شما
 """
     bot.send_message(ADMIN_ID, text)
-    bot.send_message(message.chat.id, "✅ سوال شما با موفقیت ارسال شد.")
+    bot.send_message(message.chat.id, "✅  صحبت شما با موفقیت ارسال شد و در حال پردازش برای بررسی موضوع هستیم.")
     del waiting_users[user.id]
 
 @bot.message_handler(commands=['reply'])
@@ -81,7 +81,7 @@ def reply_to_user(message):
         return
 
     try:
-        bot.send_message(target_user_id, f"📬 پاسخ به سوال شما:\n\n{answer_text}")
+        bot.send_message(target_user_id, f"📬 پاسخ به صحبت شما:\n\n{answer_text}")
         bot.send_message(ADMIN_ID, "✅ پاسخ ارسال شد.")
         del question_map[qid]
     except Exception as e:
